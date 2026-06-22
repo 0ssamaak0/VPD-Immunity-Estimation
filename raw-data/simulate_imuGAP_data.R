@@ -95,7 +95,7 @@ simulate_imuGAP_data <- function(
 
   # ── Input validation ────────────────────────────────────────────────────────
   stopifnot(
-    "phi_st must have length == n_yr"           = length(phi_st) == n_yr,
+    "phi_st must have length == n_cohort"       = length(phi_st) == n_cohort,
     "phi_st values must be in (0, 1)"           = all(phi_st > 0 & phi_st < 1),
     "lambda must have length 2"                  = length(lambda) == 2L,
     "lambda values must be positive"             = all(lambda > 0),
