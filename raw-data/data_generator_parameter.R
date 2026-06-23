@@ -224,6 +224,8 @@ fit_sim <- sampling(
 
 saveRDS(fit_sim, "fit_sim4.rds")
 
+fit_sim4 <-fit_sim
+
 ##target_simulation
 
 target_sim <- create_target(
@@ -238,7 +240,7 @@ nc_observations
 
 predict_sim <- predict(object = fit_sim, target = target_sim, posterior_size = 100)
 
-
+predict_sim4 <-predict_sim
 
 # Calculate the posterior mean coverage probability for each location and dose at age 5
 summary_predict <- summary(predict_sim)
@@ -333,5 +335,30 @@ ggplot() +
 
 saveRDS(predict_sim, "predict_sim4.rds")
 
+#average for simulation 1
+
+summary_dt_sim1 <- as.data.table(summary(predict_sim1))
+
+avg_by_age_sim1 <- summary_dt_sim1[loc_id == "State" & dose == 2, .(
+  mean_coverage = round(mean(mean),  3),
+  lower_ci      = round(mean(q2_5),  3),
+  upper_ci      = round(mean(q97_5), 3)
+), by = age][order(age)]
+
+# Non-zero only
+average_1<-avg_by_age_sim1[mean_coverage > 0]
+average_1
+
+#avergae for simulation 4
+summary_dt_sim4 <- as.data.table(summary(predict_sim4))
+
+avg_by_age_sim4 <- summary_dt_sim4[loc_id == "State" & dose == 2, .(
+  mean_coverage = round(mean(mean),  3),
+  lower_ci      = round(mean(q2_5),  3),
+  upper_ci      = round(mean(q97_5), 3)
+), by = age][order(age)]
+
+# Non-zero only
+average_4<-avg_by_age_sim4[mean_coverage > 0]
 
 
