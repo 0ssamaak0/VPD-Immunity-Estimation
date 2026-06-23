@@ -10,8 +10,8 @@
 ##   sim <- simulate_imuGAP_data(seed = 42, sigma_sch = 1.2, n_schools = c(5,5,4))
 ##   print_sim_summary(sim)
 
-library(dplyr)
 library(data.table)
+library(dplyr)
 
 # Base R replacement for EnvStats::rlnormTrunc() — no extra package needed.
 # Draws n values from a truncated log-normal via rejection sampling.
@@ -28,35 +28,8 @@ library(data.table)
   out
 }
 
-
 # =============================================================================
 #' Simulate imuGAP input data
-#'
-#' @param seed            Integer random seed.
-#' @param n_yr            Number of model years (length of the time series).
-#' @param n_cohort        Number of birth cohorts in the child vax view.
-#' @param phi_st          Numeric vector (length = n_yr) of true state-level
-#'                        vaccination probabilities. Must be in (0, 1).
-#'                        Defaults to the trajectory used in the package fixture.
-#' @param lambda          Length-2 vector: uptake rate parameters for dose 1
-#'                        and dose 2.
-#' @param sigma_sch       SD of the school-level random effect (log-odds scale).
-#' @param sigma_cnty      SD of the county-level random effect (log-odds scale).
-#' @param other_vax_reduction  Scalar in (0,1]: multiplicative reduction applied
-#'                        to child-view coverage to model imperfect data capture.
-#' @param n_schools       Integer vector of length 3: number of schools in each
-#'                        county. Must sum to <= 24 (available school names).
-#' @param dose_schedule   Integer vector: years after baseline when each dose
-#'                        becomes available.
-#' @param county_names    Character vector of length 3: names for the counties.
-#' @param school_names    Character vector: pool of school names to draw from.
-#'                        Length must be >= sum(n_schools).
-#'
-#' @return A named list with three data.tables:
-#'   \item{observations}{The observations_sim table.}
-#'   \item{populations}{The populations_sim table.}
-#'   \item{locations}{The locations_sim table.}
-#'   and the parameters used, for reference.
 # =============================================================================
 simulate_imuGAP_data <- function(
   seed              = 93254L,
@@ -139,7 +112,7 @@ simulate_imuGAP_data <- function(
   n24 <- round(runif(n_cohort, 250, 450))
   n36 <- round(runif(n_cohort, 250, 450))
 
-  sim_child <- bind_rows(
+  sim_child <- dplyr::bind_rows(
     data.frame(
       vaxview_type = "child", Year = 1:n_cohort, age = "24 months",
       y_obs = rbinom(n_cohort, n24, phi_st * cov[2, 1] * other_vax_reduction),
@@ -191,40 +164,49 @@ simulate_imuGAP_data <- function(
       y_smp       = nsch
     )
   }
-  kg_sim_full <- bind_rows(kg_sim_full)
+  kg_sim_full <- dplyr::bind_rows(kg_sim_full)
 
   # ── School vax view (aggregate) ─────────────────────────────────────────────
   annual_tots <- kg_sim_full |>
-    group_by(year) |>
-    summarize(tot_enr = sum(y_smp), tot_vax = sum(y_obs), .groups = "drop")
+    dplyr::group_by(year) |>
+    dplyr::summarize(tot_enr = sum(y_smp), tot_vax = sum(y_obs), .groups = "drop")
 
-  sim_school <- data.frame(
-    vaxview_type = "school",
-    Year         = annual_tots$year,
-    y_smp        = round(annual_tots$tot_enr * 0.9),
-    y_obs        = rbinom(
-      nrow(annual_tots),
-      round(annual_tots$tot_enr * 0.9),
-      phi_st[sch_yrs - 5] * cov[5, 2]
+  # Fixed syntax: Removed the extra "sim_school <- data.frame(" wrapper here
+  if (nrow(annual_tots) > 0) {
+    probs <- rep_len(phi_st[sch_yrs - 5] * cov[5, 2], nrow(annual_tots))
+    sim_school <- data.frame(
+      vaxview_type = rep("school", nrow(annual_tots)),
+      Year         = annual_tots$year,
+      y_smp        = round(annual_tots$tot_enr * 0.9),
+      y_obs        = rbinom(
+        nrow(annual_tots),
+        round(annual_tots$tot_enr * 0.9),
+        probs
+      )
     )
-  )
+  } else {
+    sim_school <- data.frame(
+      vaxview_type = character(0),
+      Year = integer(0),
+      y_smp = integer(0),
+      y_obs = integer(0)
+    )
+  }
 
   # ── Assign names ────────────────────────────────────────────────────────────
-  kg_sim <- kg_sim_full |>
-    group_by(unit_id) |>
-    mutate(unit_id = cur_group_id() + 4L) |>
-    ungroup()
+  kg_sim <- kg_sim_full
+  kg_sim$unit_id <- kg_sim$unit_id + 4L
 
   kg_sim$county <- county_names[kg_sim$enc_unit_id - 1L]
   kg_sim$school <- school_names[kg_sim$unit_id - 4L]
 
   kg_sim <- kg_sim |>
-    select(loc_id = school, parent_id = county, year, enc_unit_id, unit_id,
-           y_obs, y_smp)
+    dplyr::select(loc_id = school, parent_id = county, year, enc_unit_id, unit_id,
+                  y_obs, y_smp)
 
-  vv_sim <- bind_rows(sim_child, sim_school, sim_teen) |>
-    rename(year = Year) |>
-    mutate(loc_id = "State")
+  vv_sim <- dplyr::bind_rows(sim_child, sim_school, sim_teen) |>
+    dplyr::rename(year = Year) |>
+    dplyr::mutate(loc_id = "State")
 
   # ── Calendar years ──────────────────────────────────────────────────────────
   kg_sim$year <- kg_sim$year + 1995L
@@ -232,40 +214,40 @@ simulate_imuGAP_data <- function(
 
   # ── Weight / dose / lag-year info ───────────────────────────────────────────
   kg_sim <- kg_sim |>
-    mutate(ly_min = 5, ly_max = 5, dose = 2, weight = 1)
+    dplyr::mutate(ly_min = 5, ly_max = 5, dose = 2, weight = 1)
 
   vv_sim <- vv_sim |>
-    mutate(
-      ly_min = case_when(
+    dplyr::mutate(
+      ly_min = dplyr::case_when(
         vaxview_type == "school"                  ~ 5,
         vaxview_type == "teen"                    ~ 14,
         vaxview_type == "child" & age == "24 months" ~ 2,
         TRUE                                      ~ 3
       ),
-      ly_max = case_when(
+      ly_max = dplyr::case_when(
         vaxview_type == "school"                  ~ 5,
         vaxview_type == "teen"                    ~ 18,
         vaxview_type == "child" & age == "24 months" ~ 2,
         TRUE                                      ~ 3
       ),
-      dose = case_when(
+      dose = dplyr::case_when(
         vaxview_type %in% c("school", "teen")     ~ 2,
         TRUE                                      ~ 1
       ),
-      weight = if_else(vaxview_type == "teen", 1 / 5, 1)
+      weight = dplyr::if_else(vaxview_type == "teen", 1 / 5, 1)
     )
 
   # ── Bind and normalise cohorts ───────────────────────────────────────────────
-  observations <- bind_rows(kg_sim, vv_sim |> mutate(unit_id = 1L)) |>
-    mutate(
+  observations <- dplyr::bind_rows(kg_sim, vv_sim |> dplyr::mutate(unit_id = 1L)) |>
+    dplyr::mutate(
       by_max     = year - ly_min,
       by_min     = year - ly_max,
       cohort_min = by_min - min(by_min) + 1L,
       cohort_max = by_max - min(by_min) + 1L
     ) |>
-    select(-by_min, -by_max) |>
-    rename(positive = y_obs, sample_n = y_smp) |>
-    mutate(obs_id = row_number())
+    dplyr::select(-by_min, -by_max) |>
+    dplyr::rename(positive = y_obs, sample_n = y_smp) |>
+    dplyr::mutate(obs_id = dplyr::row_number())
 
   observations <- setDT(observations)
 
@@ -309,7 +291,6 @@ simulate_imuGAP_data <- function(
     )
   )
 }
-
 
 # =============================================================================
 #' Print a readable summary of a simulate_imuGAP_data() result
