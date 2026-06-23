@@ -1,4 +1,4 @@
-
+library(ggplot2)
 base_dir <- file.path("~/Downloads/MMEDGit/VPD-Immunity-Estimation")
 setwd(base_dir)
 source("raw-data/simulate_imuGAP_data.R")
@@ -20,7 +20,7 @@ low_phi <- sim$params  # just to see the default, then modify
 sim4 <- simulate_imuGAP_data(phi_st = rep(0.5, 30))
 
 # ── Access the tables directly ─────────────────────────────────
-nc_observation<- sim$observations
+nc_observations<- sim$observations
 nc_populations <- sim$populations
 nc_locations <- sim$locations
 
@@ -63,7 +63,7 @@ fit_sim <- sampling(
 
 ## Save the fitted model to an RDS file
 
-saveRDS(fit_sim, "fit_sim2.rds")
+saveRDS(fit_sim, "fit_sim1.rds")
 
 ##target_simulation
 
@@ -176,9 +176,10 @@ sim1_fit <- fit_sim
 predict_sim1 <- predict_sim
 saveRDS(predict_sim, "predict_sim1.rds")
 
+saveRDS(sim1_fit, "fit_sim1.rds")
 
 
-nc_observation <- sim4$observations
+nc_observations <- sim4$observations
 nc_populations <- sim4$populations
 nc_locations <- sim4$locations
 
@@ -221,7 +222,7 @@ fit_sim <- sampling(
 
 ## Save the fitted model to an RDS file
 
-saveRDS(fit_sim, "fit_sim2.rds")
+saveRDS(fit_sim, "fit_sim4.rds")
 
 ##target_simulation
 
