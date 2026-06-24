@@ -35,6 +35,7 @@ for (t in 1:17) {
 
   # Fix 3: collect into list — Generation column already exists from the function
   all_rf[[t]] <- rf_data |>
+    rename(generation = Generation) |>
     pivot_longer(
       cols      = c(S, E, I, R),
       names_to  = "Compartment",
@@ -62,7 +63,7 @@ all_rf_df <- bind_rows(all_rf) |>
   )
 
 median_rf_df <- all_rf_df |>
-  group_by(Generation, Compartment) |>
+  group_by(generation, Compartment) |>
   summarise(median_count = median(count), .groups = "drop")
 
 compartment_colors <- c(
@@ -74,14 +75,14 @@ compartment_colors <- c(
 
 plot_simulation <- ggplot(all_rf_df) +
   geom_line(
-    aes(x = Generation, y = count, group = run),
+    aes(x = generation, y = count, group = run),
     color = "gray75",
     linewidth = 0.45,
     alpha = 0.7
   ) +
   geom_line(
     data = median_rf_df,
-    aes(x = Generation, y = median_count, color = Compartment),
+    aes(x = generation, y = median_count, color = Compartment),
     linewidth = 1.4,
     inherit.aes = FALSE
   ) +
