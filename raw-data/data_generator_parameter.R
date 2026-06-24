@@ -1,3 +1,4 @@
+library(imuGAP)
 library(ggplot2)
 base_dir <- "."
 setwd(base_dir)
