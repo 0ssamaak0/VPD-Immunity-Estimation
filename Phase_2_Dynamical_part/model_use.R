@@ -1,16 +1,17 @@
-
-
 library(ggplot2)
 library(tidyr)
 library(dplyr)
+library(knitr)
 
 base_dir <- "."
 setwd(base_dir)
 source("./Phase_2_Dynamical_part/Reed_Frost_model.R")
 
+# Load baseline coverage data
 average1 <- readRDS("average_1.rds")
 average4 <- readRDS("average_4.rds")
 
+# Scale by cohort size (30 students per grade) over 14 grades
 ave1 <- 30 * average1$mean_coverage   # length 14
 ave4 <- 30 * average4$mean_coverage   # length 14
 ave  <- c(ave1, ave4)                 # length 28
@@ -19,7 +20,7 @@ generations_count <- 20
 total_pop         <- 14 * 30          # 420
 p_contact         <- 0.04
 
-all_rf <- vector("list", 18)
+all_rf <- vector("list", 17) # Explicitly sized for the 17 rolling windows
 
 for (t in 1:17) {
   idx <- t:(t + 17)
@@ -28,17 +29,18 @@ for (t in 1:17) {
   
   R0 <- min(R0, total_pop - 2)
   
+  # Initialize compartments based on background immunity (R0)
   y0_rf <- c(S = total_pop - R0 - 1, E = 1, I = 0, R = R0)
   
   rf_data <- simulate_reed_frost_seir(generations_count, y0_rf, p = p_contact)
   
-  # --- CRITICAL ADDITION: Calculate R(t) - R(0) ---
+  # Calculate cumulative infections: current R minus initial immune cluster
   rf_data <- rf_data |> 
     mutate(Cumulative_Infections = R - first(R))
   
   all_rf[[t]] <- rf_data |>
     pivot_longer(
-      cols      = c(S, E, I, R, Cumulative_Infections), # Added here
+      cols      = c(S, E, I, R, Cumulative_Infections),
       names_to  = "Compartment",
       values_to = "count"
     ) |>
@@ -48,6 +50,7 @@ for (t in 1:17) {
     )
 }
 
+# Combine all 17 runs into one master data frame
 all_rf_df <- bind_rows(all_rf) |>
   mutate(
     Compartment = recode(
@@ -56,7 +59,7 @@ all_rf_df <- bind_rows(all_rf) |>
       E = "Exposed",
       I = "Infectious",
       R = "Recovered",
-      Cumulative_Infections = "Cumulative Infections" # Added label
+      Cumulative_Infections = "Cumulative Infections"
     ),
     Compartment = factor(
       Compartment,
@@ -64,11 +67,46 @@ all_rf_df <- bind_rows(all_rf) |>
     )
   )
 
+# Calculate the median behavior across the 17 runs
 median_rf_df <- all_rf_df |>
   group_by(Generation, Compartment) |>
   summarise(median_count = median(count), .groups = "drop")
 
-# Added a color (purple) for your new trend
+
+# GENERATE THE LATEX SUMMARY (I need it for the rapport)
+simulation_summary <- data.frame(
+  Data_Object = c("ave", "rf_data (last run)", "all_rf_df", "median_rf_df"),
+  Description = c(
+    "Combined historical immunity coverage vector (Sim 1 + Sim 4)",
+    "Single Reed-Frost simulation run output with cumulative metrics",
+    "Complete long-format dataset combining all 17 rolling runs",
+    "Aggregated dataset tracking the median behavior across timelines"
+  ),
+  Key_Variables = c(
+    "Numeric vector (coverage values)",
+    "Generation, S, E, I, R, Cumulative_Infections",
+    "Generation, Compartment, count, run",
+    "Generation, Compartment, median_count"
+  ),
+  Dimensions = c(
+    paste(length(ave), "values"),
+    paste(nrow(rf_data), "rows"),
+    paste(format(nrow(all_rf_df), big.mark=","), "rows"),
+    paste(nrow(median_rf_df), "rows")
+  )
+)
+
+# Print the table formatted perfectly for LaTeX booktabs
+cat("\n--- Copy this LaTeX Table Code for your Report ---\n\n")
+kable(simulation_summary, 
+      format = "latex", 
+      booktabs = TRUE, 
+      col.names = c("Data Object", "Description", "Key Variables", "Dimensions / Rows"))
+
+# =============================================================================
+# PLOT GENERATION (Shows all 17 simulation timelines)
+# =============================================================================
+
 compartment_colors <- c(
   "Susceptible"           = "#377eb8",
   "Exposed"               = "#ff7f00",
@@ -96,11 +134,9 @@ plot_simulation <- ggplot(all_rf_df) +
   ) +
   scale_x_continuous(breaks = seq(0, generations_count, by = 5)) +
   scale_y_continuous(labels = scales::comma) +
-  facet_wrap(~ Compartment, scales = "free_y", ncol = 2) + # Automatically updates to show 5 panels
+  facet_wrap(~ Compartment, scales = "free_y", ncol = 2) + 
   guides(
-    color = guide_legend(
-      override.aes = list(linewidth = 2, alpha = 1)
-    )
+    color = guide_legend(override.aes = list(linewidth = 2, alpha = 1))
   ) +
   labs(
     title    = "Reed-Frost SEIR simulations across rolling immunity windows",
@@ -126,6 +162,5 @@ plot_simulation <- ggplot(all_rf_df) +
     axis.title         = element_text(face = "bold")
   )
 
-plot_simulation
-
-#We want to know I= R0- R(t) for each R(t) generated
+# Display plot
+print(plot_simulation)
