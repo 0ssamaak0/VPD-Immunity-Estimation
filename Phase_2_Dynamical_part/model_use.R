@@ -1,44 +1,70 @@
 library(ggplot2)
+library(tidyr)
+library(dplyr)
+
 base_dir <- file.path("~/Downloads/MMEDGit/VPD-Immunity-Estimation")
 setwd(base_dir)
-source("./dynamical_model/Reed_frost.R")
+source("./Phase_2_Dynamical_part/Reed_Frost_model.R")
 
-pop_age1 <- rep(30, length.out = 14)
+# Fix 1: extract column first, then multiply
+average1 <- readRDS("average_1.rds")
+average4 <- readRDS("average_4.rds")
 
-average1<- readRDS("average_1.rds")
+ave1 <- 30 * average1$mean_coverage   # length 14
+ave4 <- 30 * average4$mean_coverage   # length 14
+ave  <- c(ave1, ave4)                 # length 28
 
-ave1 <- (pop_age1 * average1)$mean_coverage
+generations_count <- 20
+total_pop         <- 14 * 30          # 420
 
-pop_age4 <- rep(30, length.out = 14)
+all_rf <- vector("list", 18)
 
-average4<- readRDS("average_4.rds")
+for (t in 1:17) {
+  # Fix 2: [ not () for indexing; guard against going past length(ave)
+  idx <- t:(t + 17)
+  idx <- idx[idx <= length(ave)]
+  R0  <- round(sum(ave[idx]))
 
-ave4 <- (pop_age4 * average4)$mean_coverage
+  # Guard: R0 cannot exceed total_pop - 2 (need at least S=1 and E=1)
+  R0 <- min(R0, total_pop - 2)
 
-ave <- c(ave1, ave4)
+  y0_rf <- c(S = total_pop - R0 - 1, E = 1, I = 0, R = R0)
 
-ave
+  rf_data <- simulate_reed_frost_seir(generations_count, y0_rf, p = 0.04)
 
-
-plot_simulation <-ggplot()
-for (t in 1:18) {
-   R0<-sum(ave(t:(t+17)))
-   y0_rf <- c(S = 14*30-R0-1, E = 1, I = 0, R = R0)
-   p_contact <- 1/2
-   rf_data <- simulate_reed_frost_seir(generations_count, y0_rf, p_contact)
-   rf_long <- rf_data |> 
-   pivot_longer(cols = c(S, E, I, R), names_to = "Compartment", values_to = "count") |> 
-   mutate(Compartment = factor(Compartment, levels = c('S', 'E', 'I', 'R')))
-
-   plot_simulation <- plot_simulation + ggplot(rf_long, aes(x = Generation, y = count, color = Compartment)) +
-   geom_line(linewidth = 1.2) +
-   geom_point(size = 2) +
-   theme_minimal(base_size = 14) +
-   scale_color_manual(values = c("S" = "#377eb8", "E" = "#ff7f00", "I" = "#e41a1c", "R" = "#4daf4a"))
+  # Fix 3: collect into list — Generation column already exists from the function
+  all_rf[[t]] <- rf_data |>
+    pivot_longer(
+      cols      = c(S, E, I, R),
+      names_to  = "Compartment",
+      values_to = "count"
+    ) |>
+    mutate(
+      Compartment = factor(Compartment, levels = c("S", "E", "I", "R")),
+      run         = factor(t)
+    )
 }
 
-plot_simulation <- plot_simulation + labs(
-    title = "Reed-Frost SEIR Chain-Binomial Simulation", 
-    y = "Count", 
-    x = "Generation Step"
+all_rf_df <- bind_rows(all_rf)
+
+# Fix 4: one ggplot over the combined data — group keeps runs separate
+plot_simulation <- ggplot(
+  all_rf_df,
+  aes(x     = Generation,
+      y     = count,
+      color = Compartment,
+      group = interaction(Compartment, run))
+) +
+  geom_line(linewidth = 1, alpha = 0.4) +
+  theme_minimal(base_size = 14) +
+  scale_color_manual(
+    values = c("S" = "#377eb8", "E" = "#ff7f00",
+               "I" = "#e41a1c", "R" = "#4daf4a")
+  ) +
+  labs(
+    title = "Reed-Frost SEIR Chain-Binomial Simulation",
+    y     = "Count",
+    x     = "Generation"
   )
+
+plot_simulation
