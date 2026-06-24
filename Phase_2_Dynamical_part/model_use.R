@@ -16,7 +16,6 @@ ave  <- c(ave1, ave4)                 # length 28
 
 generations_count <- 20
 total_pop         <- 14 * 30          # 420
-p_contact         <- 0.04
 
 all_rf <- vector("list", 18)
 
@@ -31,11 +30,10 @@ for (t in 1:17) {
 
   y0_rf <- c(S = total_pop - R0 - 1, E = 1, I = 0, R = R0)
 
-  rf_data <- simulate_reed_frost_seir(generations_count, y0_rf, p = p_contact)
+  rf_data <- simulate_reed_frost_seir(generations_count, y0_rf, p = 0.04)
 
   # Fix 3: collect into list — Generation column already exists from the function
   all_rf[[t]] <- rf_data |>
-    rename(generation = Generation) |>
     pivot_longer(
       cols      = c(S, E, I, R),
       names_to  = "Compartment",
@@ -47,79 +45,26 @@ for (t in 1:17) {
     )
 }
 
-all_rf_df <- bind_rows(all_rf) |>
-  mutate(
-    Compartment = recode(
-      Compartment,
-      S = "Susceptible",
-      E = "Exposed",
-      I = "Infectious",
-      R = "Recovered"
-    ),
-    Compartment = factor(
-      Compartment,
-      levels = c("Susceptible", "Exposed", "Infectious", "Recovered")
-    )
-  )
+all_rf_df <- bind_rows(all_rf)
 
-median_rf_df <- all_rf_df |>
-  group_by(generation, Compartment) |>
-  summarise(median_count = median(count), .groups = "drop")
-
-compartment_colors <- c(
-  "Susceptible" = "#377eb8",
-  "Exposed"     = "#ff7f00",
-  "Infectious"  = "#e41a1c",
-  "Recovered"   = "#4daf4a"
-)
-
-plot_simulation <- ggplot(all_rf_df) +
-  geom_line(
-    aes(x = generation, y = count, group = run),
-    color = "gray75",
-    linewidth = 0.45,
-    alpha = 0.7
-  ) +
-  geom_line(
-    data = median_rf_df,
-    aes(x = generation, y = median_count, color = Compartment),
-    linewidth = 1.4,
-    inherit.aes = FALSE
-  ) +
+# Fix 4: one ggplot over the combined data — group keeps runs separate
+plot_simulation <- ggplot(
+  all_rf_df,
+  aes(x     = Generation,
+      y     = count,
+      color = Compartment,
+      group = interaction(Compartment, run))
+) +
+  geom_line(linewidth = 1, alpha = 0.4) +
+  theme_minimal(base_size = 14) +
   scale_color_manual(
-    name   = "Compartment",
-    values = compartment_colors
-  ) +
-  scale_x_continuous(breaks = seq(0, generations_count, by = 5)) +
-  scale_y_continuous(labels = scales::comma) +
-  facet_wrap(~ Compartment, scales = "free_y", ncol = 2) +
-  guides(
-    color = guide_legend(
-      override.aes = list(linewidth = 2, alpha = 1)
-    )
+    values = c("S" = "#377eb8", "E" = "#ff7f00",
+               "I" = "#e41a1c", "R" = "#4daf4a")
   ) +
   labs(
-    title    = "Reed-Frost SEIR simulations across rolling immunity windows",
-    subtitle = paste0(
-      "17 simulations (rolling 18-month coverage windows) · ",
-      "N = ", format(total_pop, big.mark = ","),
-      " · p = ", p_contact,
-      " · ", generations_count, " generations"
-    ),
-    x        = "Generation (time step)",
-    y        = "Individuals",
-    caption  = "Gray lines: individual runs · Colored lines: median across runs"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    plot.title         = element_text(face = "bold", size = 14),
-    plot.subtitle      = element_text(color = "gray40", size = 11),
-    plot.caption       = element_text(color = "gray50", size = 9, hjust = 0),
-    strip.text         = element_text(face = "bold"),
-    legend.position    = "bottom",
-    legend.title       = element_text(face = "bold"),
-    panel.grid.minor   = element_blank(),
-    axis.title         = element_text(face = "bold")
+    title = "Reed-Frost SEIR Chain-Binomial Simulation",
+    y     = "Count",
+    x     = "Generation"
   )
 
 plot_simulation
