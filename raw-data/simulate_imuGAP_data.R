@@ -92,6 +92,7 @@ simulate_imuGAP_data <- function(
     doses[(dose_schedule[i] + 1):nrow(doses), i] <- 1
   }
 
+  # cov stores the expected cumulative uptake by age/year for each dose.
   cov <- matrix(nrow = n_yr, ncol = n_doses)
   cov[1, ] <- 0
   for (d in seq_len(n_doses)) {
@@ -154,6 +155,7 @@ simulate_imuGAP_data <- function(
       nsch[y] <- max(4, round(runif(1, nsch[y - 1] - 5, nsch[y - 1] + 5)))
     }
     offset   <- sch_offset[s] + cnty_offset[cnty_ids[s]]
+    # Random effects shift each school's coverage on the logit scale.
     cov_temp <- plogis(qlogis(phi_st[sch_yrs - 5]) + offset) * cov[5, 2]
 
     kg_sim_full[[s]] <- data.frame(
@@ -171,7 +173,7 @@ simulate_imuGAP_data <- function(
     dplyr::group_by(year) |>
     dplyr::summarize(tot_enr = sum(y_smp), tot_vax = sum(y_obs), .groups = "drop")
 
-  # Fixed syntax: Removed the extra "sim_school <- data.frame(" wrapper here
+  # The school survey is a noisy aggregate of the simulated school records.
   if (nrow(annual_tots) > 0) {
     probs <- rep_len(phi_st[sch_yrs - 5] * cov[5, 2], nrow(annual_tots))
     sim_school <- data.frame(
@@ -240,6 +242,7 @@ simulate_imuGAP_data <- function(
   # ── Bind and normalise cohorts ───────────────────────────────────────────────
   observations <- dplyr::bind_rows(kg_sim, vv_sim |> dplyr::mutate(unit_id = 1L)) |>
     dplyr::mutate(
+      # imuGAP works in cohort indices, so translate each observation's age window.
       by_max     = year - ly_min,
       by_min     = year - ly_max,
       cohort_min = by_min - min(by_min) + 1L,
@@ -253,6 +256,7 @@ simulate_imuGAP_data <- function(
 
   # ── Populations ─────────────────────────────────────────────────────────────
   populations <- rbindlist(lapply(seq_len(nrow(observations)), function(i) {
+    # One observation can represent several age/cohort cells; weights split it.
     data.table(
       obs_id = observations$obs_id[i],
       loc_id = observations$loc_id[i],

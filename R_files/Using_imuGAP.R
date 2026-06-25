@@ -9,6 +9,7 @@ library(plyr)
 base_dir <- file.path("data")
 derived_dir <- file.path(base_dir, "derived")
 
+# These CSVs are the Python-prepared NC tables in imuGAP's three-table format.
 school <- read.csv(file.path(base_dir, "all-schools.csv"))
 
 nc_locations <- read.csv(file.path(derived_dir, "nc_locations.csv"),
@@ -19,6 +20,7 @@ setDT(nc_observations)
 
 nc_populations <- read.csv(file.path(derived_dir, "nc_populations.csv"))
 
+# Canonicalization checks hierarchy layers and observation/population consistency.
 canonical_locations <-canonicalize_locations(nc_locations)
 
 canonical_observations <- canonicalize_observations(nc_observations)
@@ -43,6 +45,7 @@ layer_4_list <- canonical_locations[layer == max_layer, loc_id]
 ### fit the model
 
 
+# Fit on the prepared NC inputs after they pass the canonicalizer checks.
 fit_sim <- sampling(
   
   nc_observations,

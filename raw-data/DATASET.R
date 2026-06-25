@@ -1,5 +1,6 @@
 ## data-raw/fit_sim.R
 ## Fully self-contained: no external RDS file required.
+## Legacy standalone version of the synthetic fixture; simulate_imuGAP_data.R wraps this logic for easier parameter sweeps.
 
 library(dplyr)
 library(splines)
@@ -41,6 +42,7 @@ for (i in seq_along(dose_schedule)) {
 cov <- matrix(nrow = n_yr, ncol = n_doses)
 cov[1, ] <- 0
 
+# Uptake is built dose-by-dose so dose 2 depends on prior dose 1 coverage.
 for (d in seq_len(n_doses)) {
   ref      <- if (d == 1L) rep(1, n_yr) else cov[, d - 1L]
   survival <- (1 - exp(-lambda[d] * doses[, d]))
@@ -133,6 +135,7 @@ for (s in seq_len(sum(sch_per_cnty$n_sch))) {
     if (nsch[y] < 4) nsch[y] <- 4
   }
   offset   <- sch_offset[s] + cnty_offset[cnty_ids[s]]
+  # County and school random effects create location-level coverage differences.
   cov_temp <- plogis(qlogis(phi_st[sch_yrs - 5]) + offset) * cov[5, 2]
   kg_sim_full[[s]] <- data.frame(
     year       = sch_yrs,

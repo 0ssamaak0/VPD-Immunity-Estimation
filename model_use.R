@@ -8,6 +8,7 @@ base_dir <- file.path("~/MMED/VPD-Immunity-Estimation")
 setwd(base_dir)
 source("./Phase_2_Dynamical_part/Reed_Frost_model.R")
 
+# These coverage summaries come from the fitted imuGAP scenarios.
 average1 <- readRDS("average_1.rds")
 average4 <- readRDS("average_4.rds")
 
@@ -22,6 +23,7 @@ p_contact         <- 0.04
 all_rf <- vector("list", 18)
 
 for (t in 1:17) {
+  # Convert each rolling coverage window into an initial recovered/immunized count.
   idx <- t:(t + 17)
   idx <- idx[idx <= length(ave)]
   R0  <- round(sum(ave[idx]))
@@ -64,6 +66,7 @@ all_rf_df <- bind_rows(all_rf) |>
     )
   )
 
+# Use the median to show the central tendency across rolling-window simulations.
 median_rf_df <- all_rf_df |>
   group_by(Generation, Compartment) |>
   summarise(median_count = median(count), .groups = "drop")

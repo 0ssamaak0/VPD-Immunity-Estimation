@@ -8,6 +8,7 @@ setwd(base_dir)
 source("./Phase_2_Dynamical_part/Reed_Frost_model.R")
 
 # Load baseline coverage data
+# These RDS files are the age-level coverage summaries from the imuGAP scenarios.
 average1 <- readRDS("average_1.rds")
 average4 <- readRDS("average_4.rds")
 
@@ -23,6 +24,7 @@ p_contact         <- 0.04
 all_rf <- vector("list", 17) # Explicitly sized for the 17 rolling windows
 
 for (t in 1:17) {
+  # Each window turns a slice of coverage history into an initial immune count.
   idx <- t:(t + 17)
   idx <- idx[idx <= length(ave)]
   R0  <- round(sum(ave[idx]))
@@ -68,6 +70,7 @@ all_rf_df <- bind_rows(all_rf) |>
   )
 
 # Calculate the median behavior across the 17 runs
+# The median summarizes the typical trajectory while keeping individual runs visible.
 median_rf_df <- all_rf_df |>
   group_by(Generation, Compartment) |>
   summarise(median_count = median(count), .groups = "drop")

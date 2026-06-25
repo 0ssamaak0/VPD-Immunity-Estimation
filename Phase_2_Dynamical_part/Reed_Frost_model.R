@@ -10,6 +10,7 @@ library(tidyverse)
 
 
 simulate_reed_frost_seir <- function(generations, y0, p) {
+  # Reed-Frost is stochastic: the same inputs can produce different outbreak sizes.
   # Initialize vectors to store states over time
   S <- numeric(generations + 1)
   E <- numeric(generations + 1)
@@ -33,6 +34,7 @@ simulate_reed_frost_seir <- function(generations, y0, p) {
     }
     
     # Probability of a susceptible getting infected by the current pool of I
+    # p is the per-pair effective contact probability for one generation.
     prob_infection <- 1 - (1 - p)^I[t]
     
     # Sample the number of new exposures using the binomial distribution

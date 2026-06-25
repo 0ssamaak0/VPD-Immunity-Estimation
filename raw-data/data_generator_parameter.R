@@ -2,6 +2,8 @@ library(imuGAP)
 library(ggplot2)
 base_dir <- "."
 setwd(base_dir)
+
+# This driver compares the default synthetic coverage scenario with a low-coverage scenario.
 source("raw-data/simulate_imuGAP_data.R")
 
 # ── Default (matches the package fixture exactly) ──────────────
@@ -21,6 +23,7 @@ low_phi <- sim$params  # just to see the default, then modify
 sim4 <- simulate_imuGAP_data(phi_st = rep(0.5, 30))
 
 # ── Access the tables directly ─────────────────────────────────
+# Use the default scenario first; the same fitting block is repeated below for sim4.
 nc_observations<- sim$observations
 nc_populations <- sim$populations
 nc_locations <- sim$locations
@@ -36,6 +39,7 @@ derived_dir <- file.path(base_dir, "derived")
 
 
 # Canonicalize and validate
+# The canonicalizers are the schema gate before running the Stan fit.
 canonical_locations <- canonicalize_locations(nc_locations)
 head(canonical_locations)
 
@@ -68,6 +72,7 @@ saveRDS(fit_sim, "fit_sim1.rds")
 
 ##target_simulation
 
+# Predict a snapshot for every location, age 1-18, and both dose levels.
 target_sim <- create_target(
   fit = fit_sim, location = unique(nc_locations$loc_id), age = 1:18,
   cohort = max(nc_populations$cohort) - 18, dose = c(1, 2), mode = "snapshot"
@@ -195,6 +200,7 @@ derived_dir <- file.path(base_dir, "derived")
 
 
 # Canonicalize and validate
+# Repeat validation for the low-coverage scenario before fitting it.
 canonical_locations <- canonicalize_locations(nc_locations)
 head(canonical_locations)
 
@@ -347,6 +353,7 @@ avg_by_age_sim1 <- summary_dt_sim1[loc_id == "State" & dose == 2, .(
 ), by = age][order(age)]
 
 # Non-zero only
+# These state-level age averages feed the Reed-Frost phase as background immunity.
 average_1<-avg_by_age_sim1[mean_coverage > 0]
 average_1
 

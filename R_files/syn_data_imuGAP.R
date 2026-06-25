@@ -5,6 +5,7 @@ library(ggplot2)
 
 #step 1: load the data
 
+# Start from imuGAP's built-in synthetic fixture to learn the expected schemas.
 data("locations_sim", package = "imuGAP")
 head(locations_sim)
 
@@ -41,6 +42,7 @@ head(locations_sim)
 canonical_locations <- canonicalize_locations(locations_sim)
 head(canonical_locations)
 
+# Reuse the package fixture as the working "nc_*" inputs for this baseline fit.
 nc_locations <- locations_sim
 nc_observations <- observations_sim
 nc_populations <- populations_sim
@@ -73,6 +75,7 @@ saveRDS(fit_sim, "fit_sim2.rds")
 
 ##target_simulation
 
+# Build prediction targets for all hierarchy levels, ages, and doses.
 target_sim <- create_target(
   fit = fit_sim, location = unique(nc_locations$loc_id), age = 1:18,
   cohort = max(nc_populations$cohort) - 18, dose = c(1, 2), mode = "snapshot"
@@ -92,6 +95,7 @@ summary_predict <- summary(predict_sim)
 head(summary_predict)
 
 mcv1_baseline <- subset(summary_predict, dose == 1)
+# Save the one-dose baseline for downstream comparison with reduced-coverage scenarios.
 write.csv(mcv1_baseline, "mcv1_coverage_baseline.csv", row.names = FALSE)
 
 summary_predict |>

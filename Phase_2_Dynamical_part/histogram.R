@@ -9,6 +9,7 @@ setwd(base_dir)
 source("./Phase_2_Dynamical_part/Reed_Frost_model.R")
 
 # Load baseline coverage data
+# Coverage summaries become the starting immune population for each window.
 average1 <- readRDS("average_1.rds")
 average4 <- readRDS("average_4.rds")
 
@@ -37,6 +38,7 @@ for (t in 1:13) {
 
   step_t_rf <- vector("list",number_of_simulation)
 
+   # Repeat the stochastic Reed-Frost run so each window has an outbreak distribution.
    for (i in 1:number_of_simulation){
   rf_data <- simulate_reed_frost_seir(generations_count, y0_rf, p = p_contact)
   
@@ -86,6 +88,7 @@ head(DT)
 
 selected_years <- as.integer(round(seq(1, 13, length.out = 6)))
 
+# Show representative rolling windows instead of plotting all 13 panels.
 histogram_plot <- ggplot(
   DT |> filter(year %in% selected_years),
   aes(x = cumulative_infection)
