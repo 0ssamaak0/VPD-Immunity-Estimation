@@ -19,13 +19,12 @@ ave  <- c(ave1, ave4)                 # length 28
 
 generations_count <- 20
 total_pop         <- 14 * 30          # 420
-p_contact         <- 0.04
+p_contact         <- 0.02
 
 all_rf <- vector("list", 17) # Explicitly sized for the 17 rolling windows
 
-for (t in 1:17) {
-  # Each window turns a slice of coverage history into an initial immune count.
-  idx <- t:(t + 17)
+for (t in 1:14) {
+  idx <- t:(t + 14)
   idx <- idx[idx <= length(ave)]
   R0  <- round(sum(ave[idx]))
   
