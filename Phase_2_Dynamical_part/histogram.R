@@ -16,75 +16,81 @@ average4 <- readRDS("average_4.rds")
 # Scale by cohort size (30 students per grade) over 14 grades
 ave1 <- 30 * average1$mean_coverage   # length 14
 ave4 <- 30 * average4$mean_coverage   # length 14
-average1$mean_coverage
 
 ave  <- c(ave1, ave4)                 # length 28
 
 generations_count <- 20
 total_pop         <- 14 * 30          # 420
-p_contact         <- 0.02
+p_contact         <- 0.04
+window_width      <- 14
 
-all_rf <- vector("list", 15) # Explicitly sized for the rolling windows
+number_of_simulation <- 1000
+number_of_windows    <- length(ave) - window_width + 1
 
-for (t in 1:15) {
-  idx <- t:(t + 13)
-  idx <- idx[idx <= length(ave)]
+add_cumulative_infections <- function(rf_data) {
+  rf_data |>
+    mutate(
+      Cumulative_Infections = .data$E + .data$I + .data$R - first(.data$R)
+    )
+}
+
+all_rf <- vector("list", number_of_windows)
+
+for (t in seq_len(number_of_windows)) {
+  idx <- t:(t + window_width - 1)
   R0  <- round(sum(ave[idx]))
   
   R0 <- min(R0, total_pop - 2)
   
   # Initialize compartments based on background immunity (R0)
   y0_rf <- c(S = total_pop - R0 - 1, E = 1, I = 0, R = R0)
-  
-  number_of_simulation <-100
 
-  step_t_rf <- vector("list",number_of_simulation)
+  step_t_rf <- vector("list", number_of_simulation)
 
-   # Repeat the stochastic Reed-Frost run so each window has an outbreak distribution.
-   for (i in 1:number_of_simulation){
-  rf_data <- simulate_reed_frost_seir(generations_count, y0_rf, p = p_contact)
-  
-  # Calculate cumulative infections: current R minus initial immune cluster
-  rf_data <- rf_data |> 
-    mutate(Cumulative_Infections = R - first(R))
+  # Repeat the stochastic Reed-Frost run so each window has an outbreak distribution.
+  for (i in seq_len(number_of_simulation)) {
+    rf_data <- simulate_reed_frost_seir(generations_count, y0_rf, p = p_contact)
+    
+    # Count everyone infected so far, including active exposed/infectious cases.
+    rf_data <- add_cumulative_infections(rf_data)
     step_t_rf[[i]] <- rf_data["Cumulative_Infections"]
+  }
   all_rf[[t]] <- step_t_rf
-    }
 }
 
 
-#function that get the list of final value
+# function that gets the list of final values
 list_for <- function(t){
-  final_values <-rep(1,length.out = 100)
-   for (j in 1:100){
-    final_values[j]<-tail(all_rf[[t]][[j]],n= 1)[1]}
+  final_values <- rep(1, length.out = number_of_simulation)
+  for (j in seq_len(number_of_simulation)){
+    final_values[j] <- tail(all_rf[[t]][[j]]$Cumulative_Infections, n = 1)
+  }
   return(unlist(final_values))
 }
 
-list_for(1)
-#function lpot
-plot_histogram_for <-function(t)
-{   df <- data.frame(value = list_for(t))
-    ggplot(df, aes(x = .data$value)) + 
-  geom_histogram(binwidth = 1, fill = "#377eb8", color = "white", linewidth = 0.25) +
-  labs(
-    title = paste("Cumulative infections for rolling window", t),
-    subtitle = "100 stochastic Reed-Frost simulations",
-    x = "Cumulative infections",
-    y = "Simulation count"
-  ) +
-  theme_minimal(base_size = 16) +
-  theme(
-    plot.title       = element_text(face = "bold", size = 20),
-    plot.subtitle    = element_text(color = "gray35", size = 14),
-    axis.title       = element_text(face = "bold"),
-    panel.grid.minor = element_blank()
-  )
+# function to plot
+plot_histogram_for <- function(t) {
+  df <- data.frame(value = list_for(t))
+  ggplot(df, aes(x = .data$value)) + 
+    geom_histogram(binwidth = 1, fill = "#377eb8", color = "white", linewidth = 0.25) +
+    labs(
+      title = paste("Cumulative infections for rolling window", t),
+      subtitle = paste(number_of_simulation, "stochastic Reed-Frost simulations"),
+      x = "Cumulative infections",
+      y = "Simulation count"
+    ) +
+    theme_minimal(base_size = 16) +
+    theme(
+      plot.title       = element_text(face = "bold", size = 20),
+      plot.subtitle    = element_text(color = "gray35", size = 14),
+      axis.title       = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    )
 }
 
-#change the argument to plot the hoistogram (argument between 1 and 15)
+#change the argument to plot the histogram (argument between 1 and 15)
 
-#How are we going to plot representative results for the 15 rolling windows
+# How are we going to plot representative results for the 15 rolling windows
 plot_histogram_for(1)
 plot_histogram_for(4)
 plot_histogram_for(7)
@@ -93,16 +99,15 @@ plot_histogram_for(13)
 
 DT <- data.frame()
 
-for(i in 1:15){
-    dt<-data.frame(year=i,
+for(i in seq_len(number_of_windows)){
+    dt <- data.frame(year = i,
     cumulative_infection = list_for(i))
-    DT <- bind_rows(DT,dt) 
+    DT <- bind_rows(DT, dt) 
 }
-head(DT)
 
-selected_years <- as.integer(round(seq(1, 15, length.out = 6)))
+selected_years <- tail(seq_len(number_of_windows), 5)
 
-# Show representative rolling windows instead of plotting all 15 panels.
+# Show the final five rolling windows instead of plotting all panels.
 histogram_plot <- ggplot(
   DT |> filter(year %in% selected_years),
   aes(x = cumulative_infection)
@@ -117,7 +122,7 @@ histogram_plot <- ggplot(
     ~ year,
     nrow     = 2,
     ncol     = 3,
-    scales   = "free_y",
+    scales   = "fixed",
     labeller = labeller(year = function(x) paste("Rolling window", x))
   ) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
@@ -126,7 +131,8 @@ histogram_plot <- ggplot(
     subtitle = paste0(
       "Reed-Frost SEIR · N = ", total_pop,
       " · p = ", p_contact,
-      " · 100 simulations per window"
+      " · ", number_of_simulation, " simulations per window",
+      " · final 5 rolling windows"
     ),
     x = "Cumulative infections",
     y = "Count"
