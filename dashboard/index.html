@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VPD Immunity &amp; Outbreak Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <h1>VPD Immunity &amp; Outbreak Dashboard</h1>
+    <p class="subtitle">School-age two-dose coverage estimates and Reed-Frost outbreak dynamics</p>
+  </header>
+
+  <nav class="tab-bar" role="tablist">
+    <button class="tab-btn active" data-tab="eda"      role="tab">EDA</button>
+    <button class="tab-btn"        data-tab="coverage" role="tab">Coverage</button>
+    <button class="tab-btn"        data-tab="outbreak" role="tab">Outbreak</button>
+  </nav>
+
+  <!-- ===== TAB 1: EDA ===== -->
+  <section id="tab-eda" class="tab-panel active" role="tabpanel">
+
+    <div class="card">
+      <div class="card-header">
+        <h2>State MCV1 Coverage Trend</h2>
+        <div class="controls">
+          <label><input type="checkbox" id="cb-24m" checked> 24 months</label>
+          <label><input type="checkbox" id="cb-36m" checked> 36 months</label>
+        </div>
+      </div>
+      <div id="plot-eda-trend" class="plot"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>School Two-Dose Coverage Distribution</h2>
+        <div class="controls">
+          <label>County:
+            <select id="eda-county" class="select-input">
+              <option value="All">All</option>
+              <option value="Scruggs">Scruggs</option>
+              <option value="Simone">Simone</option>
+              <option value="Watson">Watson</option>
+            </select>
+          </label>
+          <label>Bin width:
+            <input type="range" id="eda-binwidth" min="0.01" max="0.05" step="0.01" value="0.02">
+            <span id="eda-binwidth-val" class="range-val">0.02</span>
+          </label>
+        </div>
+      </div>
+      <div id="plot-eda-hist" class="plot"></div>
+    </div>
+
+    <div class="card">
+      <h2>County Coverage Distribution</h2>
+      <div id="plot-eda-box" class="plot"></div>
+    </div>
+
+    <div class="card">
+      <h2>Enrollment vs. Two-Dose Coverage</h2>
+      <div id="plot-eda-scatter" class="plot"></div>
+    </div>
+
+  </section>
+
+  <!-- ===== TAB 2: COVERAGE ===== -->
+  <section id="tab-coverage" class="tab-panel" role="tabpanel">
+
+    <div class="controls-bar">
+      <div class="toggle-group">
+        <span class="toggle-label">Scenario:</span>
+        <button class="toggle-btn active" data-scenario="baseline">Baseline</button>
+        <button class="toggle-btn"        data-scenario="reduced">Reduced</button>
+      </div>
+      <div class="toggle-group">
+        <span class="toggle-label">Level:</span>
+        <button class="level-btn active" data-level="state">State</button>
+        <button class="level-btn"        data-level="county">County</button>
+        <button class="level-btn"        data-level="school">School</button>
+      </div>
+    </div>
+
+    <div class="kpi-bar kpi-bar-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Coverage at age 18</div>
+        <div class="kpi-value" id="kpi-cov18">&#8212;</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Gap vs. Baseline</div>
+        <div class="kpi-value" id="kpi-gap">&#8212;</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Ages below 95%</div>
+        <div class="kpi-value" id="kpi-below95">&#8212;</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="plot-coverage" class="plot plot-tall"></div>
+    </div>
+
+  </section>
+
+  <!-- ===== TAB 3: OUTBREAK ===== -->
+  <section id="tab-outbreak" class="tab-panel" role="tabpanel">
+
+    <div class="controls-bar outbreak-controls">
+      <div class="control-group">
+        <span class="toggle-label">Window:&nbsp;<strong id="ob-window-val">1</strong></span>
+        <input type="range" id="ob-window" min="1" max="15" step="1" value="1">
+        <button id="ob-play" class="btn btn-primary">&#9654; Play</button>
+      </div>
+      <div class="control-group">
+        <span class="toggle-label">p&nbsp;=&nbsp;<strong id="ob-p-val">0.04</strong></span>
+        <input type="range" id="ob-p" min="0.01" max="0.08" step="0.01" value="0.04">
+      </div>
+      <div class="control-group">
+        <label class="toggle-label"># Sims:
+          <select id="ob-sims" class="select-input">
+            <option value="200">200</option>
+            <option value="500">500</option>
+            <option value="1000" selected>1000</option>
+            <option value="2000">2000</option>
+          </select>
+        </label>
+        <button id="ob-reroll" class="btn btn-secondary">Re-roll</button>
+      </div>
+    </div>
+
+    <div class="kpi-bar kpi-bar-7">
+      <div class="kpi-card">
+        <div class="kpi-label">Window</div>
+        <div class="kpi-value" id="kpi-ob-window">&#8212;</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Immune Seed R&#x2080;</div>
+        <div class="kpi-value" id="kpi-r0seed">&#8212;</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Median Outbreak</div>
+        <div class="kpi-value" id="kpi-median">&#8212;</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Median Major</div>
+        <div class="kpi-value" id="kpi-median-major">&#8212;</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">P(major &#x2265;5)</div>
+        <div class="kpi-value" id="kpi-pmajor">&#8212;</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">P(extinction)</div>
+        <div class="kpi-value" id="kpi-pextinct">&#8212;</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">% Infected</div>
+        <div class="kpi-value" id="kpi-pct-infected">&#8212;</div>
+      </div>
+    </div>
+
+    <div class="plot-grid-2">
+      <div class="card">
+        <h2>Epidemic Trajectories <span class="subtitle-inline">(Median &#177; IQR)</span></h2>
+        <div id="plot-ob-traj" class="plot plot-xl"></div>
+      </div>
+      <div class="card">
+        <h2>Outbreak Size Distribution</h2>
+        <div id="plot-ob-hist" class="plot"></div>
+        <p class="caption">
+          N=420 population &middot; 20 generations &middot; E&#x2080;=1 initial exposure.
+          Immune seed (R&#x2080;) derived from rolling 14-day coverage window.
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+  <script src="plotly.min.js"></script>
+  <script src="data.js"></script>
+  <script src="reedfrost.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
