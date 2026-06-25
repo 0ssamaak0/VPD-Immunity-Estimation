@@ -1,4 +1,8 @@
 # VPD Immunity Estimation
 
-We have the USD data in [allschools.csv](./allschools.csv)
-we are not sure if it's the final data yet but we will use it for now.
+**🔗 Live dashboard: [0ssamaak0.github.io/VPD-Immunity-Estimation/dashboard](https://0ssamaak0.github.io/VPD-Immunity-Estimation/dashboard/)**
+
+[![VPD Immunity & Outbreak Dashboard](assets/dashboard.png)](https://0ssamaak0.github.io/VPD-Immunity-Estimation/dashboard/)
+
+Estimating school-age immunity to vaccine-preventable diseases with **imuGAP** and
+simulating measles outbreak risk under coverage decline.
