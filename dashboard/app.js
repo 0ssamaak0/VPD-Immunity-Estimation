@@ -447,31 +447,20 @@
   let obSeed       = 42;
   let playInterval = null;
   let obDebounce   = null;
+  const OB_NSIMS   = 1000;   // fixed simulation count (UI control removed)
 
   function initOutbreak() {
     const winSlider = document.getElementById("ob-window");
-    const pSlider   = document.getElementById("ob-p");
     winSlider.max   = M.n_windows;
     winSlider.min   = 1;
     winSlider.value = 1;
-    pSlider.value   = M.p_default;
-    document.getElementById("ob-p-val").textContent      = M.p_default.toFixed(2);
     document.getElementById("ob-window-val").textContent = "1";
 
     winSlider.addEventListener("input", function () {
       document.getElementById("ob-window-val").textContent = this.value;
       scheduleObUpdate();
     });
-    pSlider.addEventListener("input", function () {
-      document.getElementById("ob-p-val").textContent = parseFloat(this.value).toFixed(2);
-      scheduleObUpdate();
-    });
-    document.getElementById("ob-sims").addEventListener("change", scheduleObUpdate);
     document.getElementById("ob-play").addEventListener("click", togglePlay);
-    document.getElementById("ob-reroll").addEventListener("click", function () {
-      obSeed = Math.floor(Math.random() * 0xFFFFFF);
-      runObUpdate();
-    });
 
     runObUpdate();
   }
@@ -502,16 +491,14 @@
 
   function runObUpdate() {
     const winIdx  = parseInt(document.getElementById("ob-window").value) - 1;
-    const p       = parseFloat(document.getElementById("ob-p").value);
-    const nSims   = parseInt(document.getElementById("ob-sims").value);
     const winData = D.windows[winIdx];
 
     const result = RF.runWindow({
       generations: M.generations,
       S0:          winData.S0,
       R0seed:      winData.R0_seed,
-      p:           p,
-      nSims:       nSims,
+      p:           M.p_default,
+      nSims:       OB_NSIMS,
       seed:        obSeed,
       N:           M.N
     });
