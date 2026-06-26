@@ -22,6 +22,11 @@ county_colors <- c(
   "Watson"  = "#7570b3"
 )
 
+# Shared y-axis range for the two state-level coverage plots (baseline below,
+# low-coverage scenario further down) so the drop is directly comparable.
+# Spans both scenarios' 95% credible intervals (~0.78-0.95) with a little padding.
+state_ylim <- c(0.77, 0.97)
+
 # This driver compares the default synthetic coverage scenario with a low-coverage scenario.
 source("raw-data/simulate_imuGAP_data.R")
 
@@ -120,6 +125,7 @@ summary_predict |>
   geom_line(aes(y = q50, color = "Median"), linewidth = 1.3) +
   scale_x_continuous(breaks = 5:18, minor_breaks = NULL) +
   scale_y_continuous(labels = function(x) paste0(round(100 * x), "%")) +
+  coord_cartesian(ylim = state_ylim) +   # shared y-axis with low-coverage plot
   scale_color_manual(NULL, values = c("Median" = "#1b9e77")) +
   scale_fill_manual(NULL, values = c("95% credible interval" = "#1b9e77")) +
   coverage_theme() +
@@ -128,6 +134,8 @@ summary_predict |>
     title = "State-level two-dose coverage",
     subtitle = "Median posterior estimate with 95% credible interval"
   )
+ggsave("report/images/to_git/state_level_coverage_before.png",
+       width = 1121 / 120, height = 835 / 120, dpi = 120)
 
 summary_predict |>
   subset(loc_id %in% c("Scruggs", "Simone", "Watson") & dose == 2 & age > 4) |>
@@ -300,6 +308,7 @@ summary_predict |>
   geom_line(aes(y = q50, color = "Median"), linewidth = 1.3) +
   scale_x_continuous(breaks = 5:18, minor_breaks = NULL) +
   scale_y_continuous(labels = function(x) paste0(round(100 * x), "%")) +
+  coord_cartesian(ylim = state_ylim) +   # shared y-axis with baseline plot
   scale_color_manual(NULL, values = c("Median" = "#1b9e77")) +
   scale_fill_manual(NULL, values = c("95% credible interval" = "#1b9e77")) +
   coverage_theme() +
@@ -308,6 +317,8 @@ summary_predict |>
     title = "Low-coverage state-level two-dose coverage",
     subtitle = "Median posterior estimate with 95% credible interval"
   )
+ggsave("report/images/to_git/after_line.png",
+       width = 1121 / 120, height = 835 / 120, dpi = 120)
 
 summary_predict |>
   subset(loc_id %in% c("Scruggs", "Simone", "Watson") & dose == 2 & age > 4) |>
